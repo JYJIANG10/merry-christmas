@@ -100,7 +100,7 @@ const App: React.FC = () => {
         {/* Memory Upload Button (Bottom) */}
         <button 
           onClick={() => fileInputRef.current?.click()}
-          className="mt-0.5 text-pink-100 hover:text-pink-500 font-mono text-[10px] font-bold tracking-[0.3em] shadow-lg transition-all flex items-center justify-center gap-3 uppercase"
+          className="mt-1 text-pink-100 hover:text-pink-500 font-mono text-[10px] font-bold tracking-[0.3em] shadow-lg transition-all flex items-center justify-center gap-3 uppercase"
         >
           <span>ADD MEMORY</span>
           <span className="text-sm">🎁</span>
