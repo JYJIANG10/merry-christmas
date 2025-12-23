@@ -30,11 +30,11 @@ export const POST_PROCESSING = {
 };
 
 export const DEFAULT_GIFT_IMAGES = [
-  "https://images.unsplash.com/photo-1543589077-47d81606c1bf?auto=format&fit=crop&q=80&w=800", // Gold ornaments
-  "https://images.unsplash.com/photo-1512389142860-9c449e58a543?auto=format&fit=crop&q=80&w=800", // Gift wrap
-  "https://images.unsplash.com/photo-1482517967863-00e15c9b44be?auto=format&fit=crop&q=80&w=800", // Winter frost
-  "https://images.unsplash.com/photo-1544273677-277914c9ad6a?auto=format&fit=crop&q=80&w=800", // Red berries
-  "https://images.unsplash.com/photo-1513297845512-48217c0500d4?auto=format&fit=crop&q=80&w=800"  // Christmas tree close-up
+   "https://pub-186562a1884d41cab825cea6778eec78.r2.dev/IMG_1985.jpg",
+   "https://pub-186562a1884d41cab825cea6778eec78.r2.dev/IMG_1986.jpg",
+   "https://pub-186562a1884d41cab825cea6778eec78.r2.dev/IMG_1987.jpg",
+   "https://pub-186562a1884d41cab825cea6778eec78.r2.dev/IMG_5316.jpg",
+   "https://pub-186562a1884d41cab825cea6778eec78.r2.dev/IMG_7368.jpg"
 ];
 
 export const DEFAULT_WISHES = [
@@ -42,5 +42,5 @@ export const DEFAULT_WISHES = [
   { text: "希望你在我身边" },
   { text: "早日遇到你爱也真诚爱你的男人" },
   { text: "祝你平安顺遂的度过这个本命年尾巴" },
-  { text: "最好的熹，见字如晤，今年真的是发生了很多事情的一年呢。我好像终于学会了及时止损，拥有了大刀阔斧斩断消耗自己关系的决心，无论是友情还是爱情。代价是痛苦的，我的一部分的期待、相信和热情也被冻结住了。于是我蜷缩起来度过这个秋冬，感受平和。我有默默想念很多次打个车就去你家过周末的时刻，在沙漠里看星空的时刻，一起蹦了不知道多少场迪...也在适应不擅长的异地关系。慢慢学会接受关系的“平淡”，荣亲的珍贵在与细水长流。春天就要来啦，我们都会幸福的！爱你的JBL " }
+  { text: "最好的熹，见字如晤，今年真的是发生了很多事情的一年呢。我好像终于学会了及时止损，拥有了大刀阔斧斩断消耗自己的关系的决心，无论是爱情还是友情。代价是，冻结了我的期待、相信和热情。于是我把自己蜷缩起来度过这个秋冬，感受平和。我有默默想念很多次打个车就去你家过周末的时刻，在沙漠里看星空的时刻，一起蹦了不知道多少场迪...也在适应不擅长的异地关系。慢慢学会接受关系的“平淡”，荣亲的珍贵在与细水长流。其实我觉得咱们俩都是情感内敛，报喜不报忧的类型。但如果你需要我，我一直都在。春天就要来啦，我们一定都会幸福的！爱你的JBL" }
 ];
