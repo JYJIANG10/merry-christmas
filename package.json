@@ -1,5 +1,5 @@
 {
-  "name": "copy-of--merry-christmas",
+  "name": "merry-christmas-nancy",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -15,8 +15,7 @@
     "@react-three/fiber": "^9.4.2",
     "@react-three/drei": "^10.7.7",
     "@react-three/postprocessing": "^3.0.4",
-    "@mediapipe/tasks-vision": "0.10.3",
-    "this": "^1.1.0"
+    "@mediapipe/tasks-vision": "0.10.3"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

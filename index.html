@@ -4,7 +4,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Merry Christmas I</title>
+    <title>Merry Christmas Nancy</title>
     <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Inter:wght@300;400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -49,24 +49,570 @@
         text-shadow: 0 0 80px rgba(255, 105, 180, 0.4);
         margin-bottom: 5vh;
       }
+      /* Animation Utilities */
+      .fade-in { animation: fadeIn 0.5s ease-out forwards; }
+      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
-  <script type="importmap">
+
+    <!-- Import Map for ESM Dependencies -->
+    <script type="importmap">
 {
   "imports": {
     "react": "https://esm.sh/react@^19.2.3",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/",
+    "react-dom": "https://esm.sh/react-dom@^19.2.3",
+    "react-dom/client": "https://esm.sh/react-dom@^19.2.3/client",
     "three": "https://esm.sh/three@^0.182.0",
     "@react-three/fiber": "https://esm.sh/@react-three/fiber@^9.4.2",
     "@react-three/drei": "https://esm.sh/@react-three/drei@^10.7.7",
     "@react-three/postprocessing": "https://esm.sh/@react-three/postprocessing@^3.0.4",
     "@mediapipe/tasks-vision": "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/+esm",
-    "this": "https://esm.sh/this@^1.1.0"
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/"
   }
 }
 </script>
-</head>
+
+    <!-- Babel Standalone to transpile JSX in the browser -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  </head>
   <body>
     <div id="root"></div>
+
+    <script type="text/babel" data-type="module">
+      import React, { useState, useRef, useEffect, useMemo, Suspense } from 'react';
+      import ReactDOM from 'react-dom/client';
+      import * as THREE from 'three';
+      import { Canvas, useFrame } from '@react-three/fiber';
+      import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
+      import { Bloom, EffectComposer, Noise, Vignette } from '@react-three/postprocessing';
+      import { HandLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
+
+      // --- Constants ---
+      const TREE_CONFIG = {
+        PARTICLE_COUNT: 20000, 
+        HEIGHT: 15,
+        BASE_RADIUS: 5,
+        CENTER_COLOR: new THREE.Color('#ff80c0'), 
+        OUTER_COLOR: new THREE.Color('#ffe0ed'),  
+        EDGE_COLOR: new THREE.Color('#ffffff'),   
+      };
+
+      const SNOW_CONFIG = {
+        COUNT: 4000, 
+        SPEED: 0.025,
+        BOUNDS: { x: 50, y: 35, z: 50 }
+      };
+
+      const BASE_RINGS_CONFIG = {
+        RADIUS_MULT: [1.5, 1.85, 2.2], 
+        WHITE_COLOR: new THREE.Color('#ffffff'), 
+        GOLD_COLOR: new THREE.Color('#ffd700'),
+        PARTICLES_PER_RING: 1000 
+      };
+
+      const POST_PROCESSING = {
+        BLOOM_INTENSITY: 1.2, 
+        BLOOM_LUMINANCE_THRESHOLD: 0.2, 
+        BLOOM_LUMINANCE_SMOOTHING: 0.9
+      };
+
+      const DEFAULT_GIFT_IMAGES = [
+        "https://images.unsplash.com/photo-1543589077-47d81606c1bf?auto=format&fit=crop&q=80&w=800",
+        "https://images.unsplash.com/photo-1512389142860-9c449e58a543?auto=format&fit=crop&q=80&w=800",
+        "https://images.unsplash.com/photo-1482517967863-00e15c9b44be?auto=format&fit=crop&q=80&w=800",
+        "https://images.unsplash.com/photo-1544273677-277914c9ad6a?auto=format&fit=crop&q=80&w=800",
+        "https://images.unsplash.com/photo-1513297845512-48217c0500d4?auto=format&fit=crop&q=80&w=800"
+      ];
+
+      const DEFAULT_WISHES = [
+        { text: "愿世界和平 (Peace on Earth)" },
+        { text: "身体健康，万事如意 (Health & Happiness)" },
+        { text: "新的一年暴富 (Prosperity 2026)" },
+        { text: "保持热爱，奔赴山海 (Stay Passionate)" },
+        { text: "遇见更好的自己 (Be a better me)" }
+      ];
+
+      const GIFT_COLORS = ['#ff0055', '#00ffcc', '#ffcc00', '#ffffff', '#7d00ff', '#ff5500', '#0099ff'];
+      const ORNAMENT_COLORS = ['#ffd700', '#ff007f', '#e5b09e', '#fff4e0', '#ffcce6', '#ffffff'];
+
+      // --- Components ---
+
+      const PinkTreeParticles = ({ pulseIntensity }) => {
+        const materialRef = useRef();
+        const particles = useMemo(() => {
+          const { PARTICLE_COUNT, HEIGHT, BASE_RADIUS, CENTER_COLOR, OUTER_COLOR, EDGE_COLOR } = TREE_CONFIG;
+          const pos = new Float32Array(PARTICLE_COUNT * 3);
+          const colors = new Float32Array(PARTICLE_COUNT * 3);
+          for (let i = 0; i < PARTICLE_COUNT; i++) {
+            const h = Math.random() * HEIGHT;
+            const radiusAtH = (1 - (h / HEIGHT)) * BASE_RADIUS;
+            const angle = Math.random() * Math.PI * 2;
+            const dist = Math.pow(Math.random(), 0.7) * radiusAtH;
+            pos[i * 3 + 0] = Math.cos(angle) * dist;
+            pos[i * 3 + 1] = h;
+            pos[i * 3 + 2] = Math.sin(angle) * dist;
+            const radialFactor = (dist / radiusAtH) || 0;
+            const color = new THREE.Color().copy(CENTER_COLOR);
+            if (radialFactor > 0.4) color.lerp(OUTER_COLOR, (radialFactor - 0.4) * 1.5);
+            if (radialFactor > 0.8) color.lerp(EDGE_COLOR, (radialFactor - 0.8) * 4.0);
+            colors[i * 3 + 0] = color.r; colors[i * 3 + 1] = color.g; colors[i * 3 + 2] = color.b;
+          }
+          return { pos, colors };
+        }, []);
+
+        const uniforms = useMemo(() => ({ uPulse: { value: 0 } }), []);
+        useFrame(() => { if (materialRef.current) materialRef.current.uniforms.uPulse.value = pulseIntensity; });
+
+        return (
+          <points>
+            <bufferGeometry>
+              <bufferAttribute attach="attributes-position" count={particles.pos.length / 3} array={particles.pos} itemSize={3} />
+              <bufferAttribute attach="attributes-color" count={particles.colors.length / 3} array={particles.colors} itemSize={3} />
+            </bufferGeometry>
+            <shaderMaterial
+              ref={materialRef}
+              transparent blending={THREE.AdditiveBlending} depthWrite={false}
+              uniforms={uniforms}
+              vertexShader={`
+                attribute vec3 color;
+                varying vec3 vColor;
+                uniform float uPulse;
+                void main() {
+                  vColor = color;
+                  vec3 pos = position;
+                  float breathe = sin(pos.y * 0.5) * 0.05;
+                  pos.x += pos.x * breathe; pos.z += pos.z * breathe;
+                  vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+                  float size = 0.15 * (1.0 + uPulse * 1.2);
+                  gl_PointSize = size * (1000.0 / -mvPosition.z);
+                  gl_Position = projectionMatrix * mvPosition;
+                }
+              `}
+              fragmentShader={`
+                varying vec3 vColor;
+                uniform float uPulse;
+                void main() {
+                  float dist = length(gl_PointCoord - vec2(0.5));
+                  if (dist > 0.5) discard;
+                  float alpha = smoothstep(0.5, 0.2, dist);
+                  vec3 finalColor = vColor * (1.0 + uPulse * 2.5);
+                  gl_FragColor = vec4(finalColor, alpha * 0.65);
+                }
+              `}
+            />
+          </points>
+        );
+      };
+
+      const SnowParticles = () => {
+        const pointsRef = useRef();
+        const { COUNT, BOUNDS } = SNOW_CONFIG;
+        const particles = useMemo(() => {
+          const pos = new Float32Array(COUNT * 3);
+          const speeds = new Float32Array(COUNT);
+          for (let i = 0; i < COUNT; i++) {
+            pos[i * 3 + 0] = (Math.random() - 0.5) * BOUNDS.x * 2;
+            pos[i * 3 + 1] = (Math.random()) * BOUNDS.y * 2 - BOUNDS.y;
+            pos[i * 3 + 2] = (Math.random() - 0.5) * BOUNDS.z * 2;
+            speeds[i] = Math.random() * 0.05 + 0.02;
+          }
+          return { pos, speeds };
+        }, []);
+        useFrame(() => {
+          if (pointsRef.current) {
+            const positions = pointsRef.current.geometry.attributes.position.array;
+            for (let i = 0; i < COUNT; i++) {
+              positions[i * 3 + 1] -= particles.speeds[i];
+              if (positions[i * 3 + 1] < -BOUNDS.y) positions[i * 3 + 1] = BOUNDS.y;
+            }
+            pointsRef.current.geometry.attributes.position.needsUpdate = true;
+          }
+        });
+        return (
+          <points ref={pointsRef}>
+            <bufferGeometry><bufferAttribute attach="attributes-position" count={particles.pos.length / 3} array={particles.pos} itemSize={3} /></bufferGeometry>
+            <pointsMaterial size={0.15} color="#ffffff" transparent opacity={0.7} sizeAttenuation blending={THREE.AdditiveBlending} />
+          </points>
+        );
+      };
+
+      const BaseRings = () => {
+        const ringsRef = useRef();
+        const { RADIUS_MULT, WHITE_COLOR, GOLD_COLOR, PARTICLES_PER_RING } = BASE_RINGS_CONFIG;
+        const baseRadius = TREE_CONFIG.BASE_RADIUS;
+        const ringsData = useMemo(() => RADIUS_MULT.map((mult, ringIdx) => {
+          const radius = baseRadius * mult;
+          const pos = new Float32Array(PARTICLES_PER_RING * 3);
+          const colors = new Float32Array(PARTICLES_PER_RING * 3);
+          for (let i = 0; i < PARTICLES_PER_RING; i++) {
+            const angle = (i / PARTICLES_PER_RING) * Math.PI * 2;
+            const jitter = (Math.random() - 0.5) * 0.8;
+            pos[i * 3 + 0] = Math.cos(angle) * (radius + jitter);
+            pos[i * 3 + 1] = 0.4 + (Math.random() - 0.5) * 0.3;
+            pos[i * 3 + 2] = Math.sin(angle) * (radius + jitter);
+            const mixColor = new THREE.Color().copy(WHITE_COLOR).lerp(GOLD_COLOR, Math.random() * 0.8);
+            colors[i * 3 + 0] = mixColor.r; colors[i * 3 + 1] = mixColor.g; colors[i * 3 + 2] = mixColor.b;
+          }
+          return { pos, colors, speed: (ringIdx + 1) * 0.12 };
+        }), []);
+        useFrame((state) => {
+          if (ringsRef.current) {
+            const t = state.clock.elapsedTime;
+            ringsRef.current.children.forEach((child, i) => {
+              child.rotation.y += ringsData[i].speed * 0.005;
+              child.position.y = Math.sin(t * 0.5 + i) * 0.15;
+            });
+          }
+        });
+        return (
+          <group ref={ringsRef}>
+            {ringsData.map((data, idx) => (
+              <points key={idx}>
+                <bufferGeometry>
+                  <bufferAttribute attach="attributes-position" count={data.pos.length / 3} array={data.pos} itemSize={3} />
+                  <bufferAttribute attach="attributes-color" count={data.colors.length / 3} array={data.colors} itemSize={3} />
+                </bufferGeometry>
+                <pointsMaterial size={0.08} color="#ffffff" transparent opacity={0.6} sizeAttenuation blending={THREE.AdditiveBlending} depthWrite={false} />
+              </points>
+            ))}
+          </group>
+        );
+      };
+
+      const HeartTop = () => {
+        const meshRef = useRef();
+        const heartShape = useMemo(() => {
+          const s = new THREE.Shape();
+          s.moveTo(0, 0); s.bezierCurveTo(0, 0, -0.8, 0.4, -0.8, 1.0); s.bezierCurveTo(-0.8, 1.5, 0, 1.5, 0, 1.0);
+          s.bezierCurveTo(0, 1.7, 0.8, 1.7, 0.8, 1.0); s.bezierCurveTo(0.8, 0.4, 0, 0, 0, 0);
+          return s;
+        }, []);
+        useFrame((state) => { if (meshRef.current) meshRef.current.rotation.y = state.clock.elapsedTime * 1.5; });
+        return (
+          <group position={[0, TREE_CONFIG.HEIGHT + 0.5, 0]}>
+            <mesh ref={meshRef}>
+              <extrudeGeometry args={[heartShape, { depth: 0.35, bevelEnabled: true, bevelSegments: 12, steps: 1, bevelSize: 0.15, bevelThickness: 0.15 }]} />
+              <meshStandardMaterial color="#ffb3d9" emissive="#ff007f" emissiveIntensity={1.2} metalness={0.9} roughness={0.1} transparent />
+            </mesh>
+          </group>
+        );
+      };
+
+      const GiftBox = ({ position: targetPos, color, imageUrl, onGiftClick }) => {
+        const meshRef = useRef();
+        const [hovered, setHover] = useState(false);
+        const [phase, setPhase] = useState('falling');
+        const currentY = useRef(25);
+        const velocityY = useRef(0);
+        const rotationOffset = useMemo(() => Math.random() * Math.PI * 2, []);
+        const boxScale = useMemo(() => 0.6 + Math.random() * 0.4, []);
+
+        useFrame((state, delta) => {
+          if (meshRef.current) {
+            if (phase === 'falling') {
+              velocityY.current -= delta * 15;
+              currentY.current += velocityY.current * delta;
+              if (currentY.current <= targetPos[1]) {
+                currentY.current = targetPos[1];
+                if (Math.abs(velocityY.current) > 2) velocityY.current *= -0.3;
+                else setPhase('landed');
+              }
+              meshRef.current.position.y = currentY.current;
+              meshRef.current.rotation.y += delta * 2;
+            } else {
+              const t = state.clock.elapsedTime;
+              meshRef.current.position.y = targetPos[1] + Math.sin(t * 1.5 + rotationOffset) * 0.05;
+              meshRef.current.rotation.y = rotationOffset + Math.sin(t * 0.5) * 0.1;
+            }
+            const targetS = boxScale * (hovered ? 1.25 : 1.0);
+            meshRef.current.scale.lerp(new THREE.Vector3(targetS, targetS, targetS), 0.15);
+          }
+        });
+
+        return (
+          <group ref={meshRef} position={[targetPos[0], currentY.current, targetPos[2]]}
+            onPointerOver={() => { setHover(true); document.body.style.cursor = 'pointer'; }}
+            onPointerOut={() => { setHover(false); document.body.style.cursor = 'auto'; }}
+            onClick={(e) => { e.stopPropagation(); onGiftClick(imageUrl); }}
+          >
+            <pointLight color={color} intensity={hovered ? 8 : 4} distance={3} decay={2} />
+            <mesh scale={[1.1, 1.1, 1.1]}><boxGeometry /><meshStandardMaterial color={color} transparent opacity={hovered ? 0.4 : 0.2} side={THREE.BackSide} emissive={color} emissiveIntensity={2} /></mesh>
+            <mesh castShadow receiveShadow><boxGeometry /><meshStandardMaterial color={color} roughness={0.1} metalness={0.4} emissive={color} emissiveIntensity={hovered ? 0.8 : 0.4} /></mesh>
+            <mesh scale={[1.05, 0.15, 1.05]}><boxGeometry /><meshStandardMaterial color="#ffd700" metalness={1} roughness={0} emissive="#ffd700" emissiveIntensity={0.5} /></mesh>
+            <mesh scale={[0.15, 1.05, 1.05]}><boxGeometry /><meshStandardMaterial color="#ffd700" metalness={1} roughness={0} emissive="#ffd700" emissiveIntensity={0.5} /></mesh>
+            <group position={[0, 0.55, 0]}>
+              <mesh rotation={[0, 0, Math.PI/4]}><torusGeometry args={[0.18, 0.04, 16, 32]} /><meshStandardMaterial color="#ffd700" metalness={1} emissive="#ffd700" /></mesh>
+              <mesh rotation={[0, Math.PI/2, Math.PI/4]}><torusGeometry args={[0.18, 0.04, 16, 32]} /><meshStandardMaterial color="#ffd700" metalness={1} emissive="#ffd700" /></mesh>
+            </group>
+          </group>
+        );
+      };
+
+      const WishSystem = ({ onArrive }) => {
+        const pointsRef = useRef();
+        const trailRef = useRef();
+        const [progress, setProgress] = useState(0);
+        const [isDone, setIsDone] = useState(false);
+        const curve = useMemo(() => new THREE.QuadraticBezierCurve3(new THREE.Vector3(0, -6, 12), new THREE.Vector3(12, 10, 8), new THREE.Vector3(0, TREE_CONFIG.HEIGHT + 0.5, 0)), []);
+        const starParticles = useMemo(() => {
+          const pos = new Float32Array(180); const colors = new Float32Array(180);
+          for (let i = 0; i < 60; i++) {
+            const r = Math.pow(Math.random(), 0.5) * 0.45; const theta = Math.random() * Math.PI * 2; const phi = Math.random() * Math.PI;
+            pos[i*3] = r * Math.sin(phi) * Math.cos(theta); pos[i*3+1] = r * Math.sin(phi) * Math.sin(theta); pos[i*3+2] = r * Math.cos(phi);
+            const c = new THREE.Color('#ff007f').lerp(new THREE.Color('#ffffff'), Math.random());
+            colors[i*3] = c.r; colors[i*3+1] = c.g; colors[i*3+2] = c.b;
+          }
+          return { pos, colors };
+        }, []);
+        const trailData = useMemo(() => ({ pos: new Float32Array(360).fill(-100) }), []);
+
+        useFrame((state, delta) => {
+          if (isDone) return;
+          const nextP = progress + delta * 0.5;
+          if (nextP >= 1) { onArrive(); setIsDone(true); } else {
+            const eased = nextP < 0.5 ? 4 * nextP * nextP * nextP : 1 - Math.pow(-2 * nextP + 2, 3) / 2;
+            const p = curve.getPoint(eased);
+            if (pointsRef.current) { pointsRef.current.position.copy(p); pointsRef.current.rotation.y += delta * 6; }
+            if (trailRef.current) {
+              const pa = trailRef.current.geometry.attributes.position.array;
+              for (let i = 119; i > 0; i--) { pa[i*3]=pa[(i-1)*3]; pa[i*3+1]=pa[(i-1)*3+1]; pa[i*3+2]=pa[(i-1)*3+2]; }
+              pa[0]=p.x; pa[1]=p.y; pa[2]=p.z;
+              trailRef.current.geometry.attributes.position.needsUpdate = true;
+            }
+            setProgress(nextP);
+          }
+        });
+        if (isDone) return null;
+        return (
+          <group>
+            <points ref={pointsRef}>
+              <bufferGeometry><bufferAttribute attach="attributes-position" count={60} array={starParticles.pos} itemSize={3} /><bufferAttribute attach="attributes-color" count={60} array={starParticles.colors} itemSize={3} /></bufferGeometry>
+              <pointsMaterial size={0.35} vertexColors transparent blending={THREE.AdditiveBlending} depthWrite={false} sizeAttenuation />
+            </points>
+            <points ref={trailRef}>
+              <bufferGeometry><bufferAttribute attach="attributes-position" count={120} array={trailData.pos} itemSize={3} /></bufferGeometry>
+              <pointsMaterial size={0.12} color="#ffccdd" transparent opacity={0.5} blending={THREE.AdditiveBlending} depthWrite={false} sizeAttenuation />
+            </points>
+          </group>
+        );
+      };
+
+      const Ornament = ({ position, text, color = "#ffcce6", onClick }) => {
+        const meshRef = useRef();
+        const [hovered, setHover] = useState(false);
+        const [materializeProgress, setMaterializeProgress] = useState(0);
+        const starShape = useMemo(() => {
+          const s = new THREE.Shape();
+          for (let i = 0; i < 10; i++) {
+            const r = i % 2 === 0 ? 0.4 : 0.18; const a = (i / 10) * Math.PI * 2 - Math.PI / 2;
+            const x = Math.cos(a) * r; const y = Math.sin(a) * r;
+            if (i === 0) s.moveTo(x, y); else s.lineTo(x, y);
+          }
+          return s;
+        }, []);
+
+        useFrame((state, delta) => {
+          if (materializeProgress < 1.0) setMaterializeProgress(prev => Math.min(1.0, prev + delta * 1.5));
+          if (meshRef.current) {
+            const t = state.clock.elapsedTime;
+            meshRef.current.rotation.y = Math.sin(t * 0.5 + position[0]) * 0.2;
+            meshRef.current.position.y = position[1] + Math.sin(t * 2 + position[0]) * 0.03;
+            const targetS = materializeProgress * (hovered ? 1.3 : 1.0);
+            meshRef.current.scale.lerp(new THREE.Vector3(targetS, targetS, targetS), 0.1);
+          }
+        });
+
+        return (
+          <group ref={meshRef} position={position}
+            onPointerOver={() => { setHover(true); document.body.style.cursor = 'pointer'; }}
+            onPointerOut={() => { setHover(false); document.body.style.cursor = 'auto'; }}
+            onClick={(e) => { e.stopPropagation(); onClick(text); }}
+          >
+            <mesh position={[0, 0.4, 0]}><cylinderGeometry args={[0.005, 0.005, 0.4]} /><meshStandardMaterial color="#ffd700" metalness={1} /></mesh>
+            <mesh><extrudeGeometry args={[starShape, { depth: 0.12, bevelEnabled: true, bevelSegments: 4, steps: 1, bevelSize: 0.05, bevelThickness: 0.05 }]} />
+              <meshStandardMaterial color={color} emissive={color} emissiveIntensity={hovered ? 2.5 : 0.6} metalness={0.9} transparent opacity={materializeProgress} />
+            </mesh>
+            <mesh scale={0.4}><sphereGeometry args={[0.2, 16, 16]} /><meshBasicMaterial color="#ffffff" transparent opacity={hovered ? 0.8 : 0.4} /></mesh>
+            <pointLight color={color} intensity={hovered ? 4.0 : 0.5} distance={2} />
+          </group>
+        );
+      };
+
+      // --- Interaction Controller ---
+
+      const InteractionController = ({ cameraEnabled, newWish, newGift, onWishComplete, onGiftComplete, onOrnamentClick, onGiftClick }) => {
+        const landmarkerRef = useRef(null);
+        const videoRef = useRef(null);
+        const groupRef = useRef(null);
+        const scaleRef = useRef(1.0);
+        const rotationTarget = useRef({ x: 0, y: 0 });
+        const [gesture, setGesture] = useState({ isOpen: false });
+        const [wishes, setWishes] = useState([]);
+        const [treePulse, setTreePulse] = useState(0);
+
+        const [placedOrnaments, setPlacedOrnaments] = useState(() => DEFAULT_WISHES.map((wish, i) => {
+          const h = Math.random() * (TREE_CONFIG.HEIGHT * 0.7) + 1.5;
+          const radiusAtH = (1 - (h / TREE_CONFIG.HEIGHT)) * TREE_CONFIG.BASE_RADIUS;
+          const angle = Math.random() * Math.PI * 2;
+          return { id: `default-wish-${i}`, text: wish.text, position: [Math.cos(angle) * (radiusAtH + 0.15), h, Math.sin(angle) * (radiusAtH + 0.15)], color: ORNAMENT_COLORS[i % ORNAMENT_COLORS.length] };
+        }));
+
+        const [placedGifts, setPlacedGifts] = useState(() => DEFAULT_GIFT_IMAGES.map((url, i) => {
+          const angle = (i * 1.25); const dist = TREE_CONFIG.BASE_RADIUS * 1.4 + (Math.random() * TREE_CONFIG.BASE_RADIUS * 0.6);
+          return { id: -(i + 1), imageUrl: url, color: GIFT_COLORS[i % GIFT_COLORS.length], position: [Math.cos(angle) * dist, 0.5, Math.sin(angle) * dist] };
+        }));
+
+        useEffect(() => { if (newWish) { setWishes(prev => [...prev, newWish]); onWishComplete(); } }, [newWish]);
+        useEffect(() => {
+          if (newGift) {
+            const angle = (placedGifts.length * 1.6) + (Math.random() * 0.4);
+            const dist = TREE_CONFIG.BASE_RADIUS * 1.3 + (Math.random() * TREE_CONFIG.BASE_RADIUS);
+            setPlacedGifts(prev => [...prev, { id: newGift.id, imageUrl: newGift.imageUrl, color: GIFT_COLORS[Math.floor(Math.random() * GIFT_COLORS.length)], position: [Math.cos(angle) * dist, 0.5, Math.sin(angle) * dist] }]);
+            onGiftComplete();
+          }
+        }, [newGift]);
+
+        const handleWishArrive = (id, text) => {
+          setWishes(prev => prev.filter(w => w.id !== id)); setTreePulse(0.8);
+          setTimeout(() => {
+            const h = Math.random() * (TREE_CONFIG.HEIGHT * 0.7) + 1.5; const r = (1 - (h / TREE_CONFIG.HEIGHT)) * TREE_CONFIG.BASE_RADIUS; const a = Math.random() * Math.PI * 2;
+            setPlacedOrnaments(prev => [...prev, { id, text, position: [Math.cos(a) * (r + 0.15), h, Math.sin(a) * (r + 0.15)], color: ORNAMENT_COLORS[Math.floor(Math.random() * ORNAMENT_COLORS.length)] }]);
+          }, 1000);
+        };
+
+        useEffect(() => {
+          if (!cameraEnabled) return;
+          const initMP = async () => {
+            try {
+              const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm");
+              landmarkerRef.current = await HandLandmarker.createFromOptions(vision, { baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task", delegate: "GPU" }, runningMode: "VIDEO", numHands: 1 });
+              const video = document.createElement('video'); video.style.display = 'none'; videoRef.current = video;
+              const stream = await navigator.mediaDevices.getUserMedia({ video: true }); video.srcObject = stream; video.play();
+            } catch (err) { console.error(err); }
+          };
+          initMP();
+          return () => { if (videoRef.current?.srcObject) videoRef.current.srcObject.getTracks().forEach(t => t.stop()); };
+        }, [cameraEnabled]);
+
+        useFrame((state, delta) => {
+          if (cameraEnabled && landmarkerRef.current && videoRef.current?.readyState >= 2) {
+            const res = landmarkerRef.current.detectForVideo(videoRef.current, performance.now());
+            if (res.landmarks?.length > 0) {
+              const lm = res.landmarks[0];
+              const dist = Math.sqrt(Math.pow(lm[4].x - lm[20].x, 2) + Math.pow(lm[4].y - lm[20].y, 2));
+              setGesture({ isOpen: dist > 0.4 });
+              rotationTarget.current.y = (lm[9].x - 0.5) * 2.2; rotationTarget.current.x = (lm[9].y - 0.5) * 1.0;
+            }
+          }
+          scaleRef.current += ((gesture.isOpen ? 2.5 : 1.0) - scaleRef.current) * 0.1;
+          if (groupRef.current) {
+            groupRef.current.scale.setScalar(scaleRef.current);
+            if (cameraEnabled) {
+              groupRef.current.rotation.y += (rotationTarget.current.y - groupRef.current.rotation.y) * 0.05;
+              groupRef.current.rotation.x += (rotationTarget.current.x - groupRef.current.rotation.x) * 0.05;
+            }
+          }
+          if (treePulse > 0) setTreePulse(prev => Math.max(0, prev - delta * 0.7));
+        });
+
+        return (
+          <group ref={groupRef} position={[0, -6, 0]}>
+            <PinkTreeParticles pulseIntensity={treePulse} />
+            <BaseRings />
+            <HeartTop />
+            <Gifts gifts={placedGifts} onGiftClick={onGiftClick} />
+            {wishes.map(w => <WishSystem key={w.id} onArrive={() => handleWishArrive(w.id, w.text)} />)}
+            {placedOrnaments.map(o => <Ornament key={o.id} {...o} onClick={onOrnamentClick} />)}
+          </group>
+        );
+      };
+
+      const Gifts = ({ gifts, onGiftClick }) => <group>{gifts.map(g => <GiftBox key={g.id} {...g} onGiftClick={onGiftClick} />)}</group>;
+
+      // --- App ---
+
+      const App = () => {
+        const [activeImage, setActiveImage] = useState(null);
+        const [cameraEnabled, setCameraEnabled] = useState(false);
+        const [wishInput, setWishInput] = useState("");
+        const [newWish, setNewWish] = useState(null);
+        const [newGift, setNewGift] = useState(null);
+        const [viewedWish, setViewedWish] = useState(null);
+        const fileInputRef = useRef(null);
+
+        const handleSendWish = (e) => {
+          e.preventDefault(); if (!wishInput.trim()) return;
+          setNewWish({ id: Date.now(), text: wishInput }); setWishInput("");
+        };
+
+        const handlePhotoUpload = (e) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => setNewGift({ id: Date.now(), imageUrl: event.target.result });
+            reader.readAsDataURL(file);
+          }
+          if (e.target) e.target.value = '';
+        };
+
+        return (
+          <div className="relative w-full h-screen bg-[#050505] overflow-hidden">
+            <div id="bg-title-container"><h1 className="bg-title-text font-cursive">Merry Christmas</h1></div>
+            <div className="w-full h-full relative z-10">
+              <Canvas shadows dpr={[1, 2]} gl={{ alpha: true, antialias: true, stencil: false }}>
+                <Suspense fallback={null}>
+                  <PerspectiveCamera makeDefault position={[0, 6, 25]} fov={40} />
+                  <OrbitControls enablePan={false} maxPolarAngle={Math.PI / 1.8} minPolarAngle={Math.PI / 6} autoRotate={!cameraEnabled} autoRotateSpeed={0.3} enableDamping minDistance={12} maxDistance={55} />
+                  <ambientLight intensity={0.4} />
+                  <InteractionController cameraEnabled={cameraEnabled} newWish={newWish} newGift={newGift} onWishComplete={() => setNewWish(null)} onGiftComplete={() => setNewGift(null)} onOrnamentClick={setViewedWish} onGiftClick={setActiveImage} />
+                  <SnowParticles />
+                  <EffectComposer enableNormalPass={false}>
+                    <Bloom intensity={POST_PROCESSING.BLOOM_INTENSITY} luminanceThreshold={POST_PROCESSING.BLOOM_LUMINANCE_THRESHOLD} luminanceSmoothing={POST_PROCESSING.BLOOM_LUMINANCE_SMOOTHING} mipmapBlur />
+                    <Noise opacity={0.015} /><Vignette darkness={1.1} />
+                  </EffectComposer>
+                </Suspense>
+              </Canvas>
+            </div>
+
+            <div className="absolute top-8 right-8 z-50 flex items-center gap-4 bg-black/40 backdrop-blur-md px-5 py-3 rounded-full border border-pink-500/20">
+              <span className="text-pink-100 text-[10px] tracking-[0.3em] uppercase font-light font-mono">{cameraEnabled ? 'Tracking Active' : 'Enable Camera'}</span>
+              <button onClick={() => setCameraEnabled(!cameraEnabled)} className={`w-12 h-6 rounded-full transition-all duration-500 flex items-center px-1 ${cameraEnabled ? 'bg-pink-500' : 'bg-gray-800'}`}><div className={`w-4 h-4 rounded-full bg-white transition-transform duration-500 ${cameraEnabled ? 'translate-x-6' : ''}`} /></button>
+            </div>
+
+            <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-50 w-full max-w-lg px-6 flex flex-col items-stretch">
+              <form onSubmit={handleSendWish} className="flex bg-black/60 backdrop-blur-2xl border border-white/10 rounded-full p-1 shadow-2xl focus-within:border-pink-500/40">
+                <input type="text" value={wishInput} onChange={(e) => setWishInput(e.target.value)} placeholder="SEND A WISH..." className="flex-1 bg-transparent px-6 py-3 text-pink-100 text-xs font-mono tracking-widest outline-none uppercase" />
+                <button type="submit" className="px-8 py-3 bg-white/5 hover:bg-pink-500/20 text-pink-200 text-[10px] font-mono tracking-[0.2em] rounded-full border border-white/5">SEND</button>
+              </form>
+              <input type="file" ref={fileInputRef} onChange={handlePhotoUpload} accept="image/*" className="hidden" />
+              <button onClick={() => fileInputRef.current?.click()} className="mt-0.5 text-pink-100 hover:text-pink-500 font-mono text-[10px] font-bold tracking-[0.3em] transition-all flex items-center justify-center gap-3 uppercase"><span>ADD MEMORY</span><span className="text-sm">🎁</span></button>
+            </div>
+
+            {viewedWish && (
+              <div className="absolute inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-[110] fade-in" onClick={() => setViewedWish(null)}>
+                <div className="bg-gradient-to-br from-pink-900/60 to-black/90 p-12 rounded-3xl border border-pink-400/30 shadow-2xl max-w-md w-full text-center" onClick={(e) => e.stopPropagation()}>
+                  <p className="text-pink-100/50 text-[10px] font-mono tracking-[0.5em] uppercase mb-6">Whisper</p>
+                  <p className="text-pink-100 text-xl font-mono tracking-wider leading-relaxed uppercase break-words">{viewedWish}</p>
+                  <button onClick={() => setViewedWish(null)} className="mt-16 px-8 py-2 bg-pink-500/20 hover:bg-pink-500/40 text-pink-100 text-[10px] font-mono tracking-widest rounded-full border border-pink-500/30">CLOSE</button>
+                </div>
+              </div>
+            )}
+
+            {activeImage && (
+              <div className="absolute inset-0 bg-black/80 backdrop-blur-xl flex items-center justify-center p-4 z-[100] fade-in" onClick={() => setActiveImage(null)}>
+                <div className="relative bg-gradient-to-br from-pink-900/40 to-black/80 p-2 rounded-[2.5rem] border border-pink-400/20 max-w-[420px] w-full shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                  <div className="aspect-[3/4] w-full rounded-[2.2rem] overflow-hidden"><img src={activeImage} className="w-full h-full object-cover transition-transform duration-1000 hover:scale-110" /></div>
+                  <button className="absolute top-6 right-6 w-7 h-7 text-white" onClick={() => setActiveImage(null)}>✕</button>
+                </div>
+              </div>
+            )}
+            <div className="absolute bottom-5 left-0 right-0 text-center pointer-events-none z-50 text-pink-400 opacity-20 text-[10px] tracking-[0.5em] uppercase font-mono">&copy; BELLA</div>
+          </div>
+        );
+      };
+
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<React.StrictMode><App /></React.StrictMode>);
+    </script>
   </body>
 </html>

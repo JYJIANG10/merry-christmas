@@ -69,12 +69,14 @@ const InteractionController: React.FC<{
   const [wishes, setWishes] = useState<any[]>([]);
   const [treePulse, setTreePulse] = useState(0);
 
-  // Initialize with 5 default ornaments (stars) already on the tree
+  // Initialize with 5 default ornaments (stars) already randomly placed on the tree
   const [placedOrnaments, setPlacedOrnaments] = useState<any[]>(() => {
     return DEFAULT_WISHES.map((wish, i) => {
-      const h = Math.random() * (TREE_CONFIG.HEIGHT * 0.7) + 1.5;
+      // Logic for random positioning on the cone surface
+      const h = Math.random() * (TREE_CONFIG.HEIGHT * 0.7) + 1.5; // From 1.5 to ~12 units high
       const radiusAtH = (1 - (h / TREE_CONFIG.HEIGHT)) * TREE_CONFIG.BASE_RADIUS;
       const angle = Math.random() * Math.PI * 2;
+      
       return {
         id: `default-wish-${i}`,
         text: wish.text,
