@@ -1,0 +1,7 @@
+{
+  "name": "Copy of  Merry Christmas ",
+  "description": "A high-fidelity 3D Christmas experience featuring a cinematic pink-gold particle tree with energy effects and hand gesture control.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
